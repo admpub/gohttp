@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lauyoume/gohttp"
+	"github.com/admpub/gohttp"
 )
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			start := time.Now()
-			_, _, err := req.Get("https://www.baidu.com/").End()
+			_, err := req.Get("https://www.baidu.com/").End()
 			log.Println(err, time.Now().Sub(start).Seconds())
 			wg.Done()
 		}()
@@ -34,7 +34,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			start := time.Now()
-			_, _, err := req.Get("https://www.baidu.com/").End()
+			_, err := req.Get("https://www.baidu.com/").End()
 			log.Println(err, time.Now().Sub(start).Seconds())
 			wg.Done()
 		}()
@@ -43,7 +43,7 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		start := time.Now()
-		_, _, err := req.Get("https://www.baidu.com/").End()
+		_, err := req.Get("https://www.baidu.com/").End()
 		log.Println(err, time.Now().Sub(start).Seconds())
 	}
 }
