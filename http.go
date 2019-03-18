@@ -102,52 +102,36 @@ func (s *HttpAgent) ClearAgent() {
 	s.DataAll = nil
 }
 
-func (s *HttpAgent) Get(targetUrl string) *HttpAgent {
+func (s *HttpAgent) RequestByMethod(method string, targetUrl string) *HttpAgent {
 	s.ClearAgent()
-	s.Method = GET
+	s.Method = method
 	s.Url = targetUrl
 	s.Errors = nil
 	return s
+}
+
+func (s *HttpAgent) Get(targetUrl string) *HttpAgent {
+	return s.RequestByMethod(GET, targetUrl)
 }
 
 func (s *HttpAgent) Post(targetUrl string) *HttpAgent {
-	s.ClearAgent()
-	s.Method = POST
-	s.Url = targetUrl
-	s.Errors = nil
-	return s
+	return s.RequestByMethod(POST, targetUrl)
 }
 
 func (s *HttpAgent) Head(targetUrl string) *HttpAgent {
-	s.ClearAgent()
-	s.Method = HEAD
-	s.Url = targetUrl
-	s.Errors = nil
-	return s
+	return s.RequestByMethod(HEAD, targetUrl)
 }
 
 func (s *HttpAgent) Put(targetUrl string) *HttpAgent {
-	s.ClearAgent()
-	s.Method = PUT
-	s.Url = targetUrl
-	s.Errors = nil
-	return s
+	return s.RequestByMethod(PUT, targetUrl)
 }
 
 func (s *HttpAgent) Delete(targetUrl string) *HttpAgent {
-	s.ClearAgent()
-	s.Method = DELETE
-	s.Url = targetUrl
-	s.Errors = nil
-	return s
+	return s.RequestByMethod(DELETE, targetUrl)
 }
 
 func (s *HttpAgent) Patch(targetUrl string) *HttpAgent {
-	s.ClearAgent()
-	s.Method = PATCH
-	s.Url = targetUrl
-	s.Errors = nil
-	return s
+	return s.RequestByMethod(PATCH, targetUrl)
 }
 
 // Set is used for setting header fields.
