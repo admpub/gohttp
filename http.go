@@ -286,6 +286,11 @@ func (s *HttpAgent) Param(key string, value string) *HttpAgent {
 	return s
 }
 
+func (s *HttpAgent) PostParam(key string, value string) *HttpAgent {
+	s.FormData.Add(key, value)
+	return s
+}
+
 func (s *HttpAgent) Timeout(timeout time.Duration) *HttpAgent {
 	s.MaxTimeout = timeout
 	return s
