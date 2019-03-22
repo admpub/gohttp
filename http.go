@@ -224,12 +224,23 @@ func (s *HttpAgent) Type(typeStr string) *HttpAgent {
 //        End()
 //
 func (s *HttpAgent) Query(content interface{}) *HttpAgent {
-	switch v := reflect.ValueOf(content); v.Kind() {
-	case reflect.String:
-		s.queryString(v.String())
-	case reflect.Struct, reflect.Map:
-		s.queryStruct(v.Interface())
+	switch t := content.(type) {
+	case url.Values:
+		for k, values := range t {
+			for _, v := range values {
+				s.QueryData.Add(k, v)
+			}
+		}
+	case map[string]interface{}:
+		s.QueryData = s.ChangeMapToURLValues(t, s.QueryData)
 	default:
+		switch v := reflect.ValueOf(content); v.Kind() {
+		case reflect.String:
+			s.queryString(v.String())
+		case reflect.Struct, reflect.Map:
+			s.queryStruct(v.Interface())
+		default:
+		}
 	}
 	return s
 }
@@ -267,7 +278,7 @@ func (s *HttpAgent) queryString(content string) *HttpAgent {
 	return s
 }
 
-// As Go conventions accepts ; as a synonym for &. (https://github.com/golang/go/issues/2210)
+// Param As Go conventions accepts ; as a synonym for &. (https://github.com/golang/go/issues/2210)
 // Thus, Query won't accept ; in a querystring if we provide something like fields=f1;f2;f3
 // This Param is then created as an alternative method to solve this.
 func (s *HttpAgent) Param(key string, value string) *HttpAgent {
@@ -280,7 +291,7 @@ func (s *HttpAgent) Timeout(timeout time.Duration) *HttpAgent {
 	return s
 }
 
-// Set TLSClientConfig for underling Transport.
+// TLSClientConfig Set TLSClientConfig for underling Transport.
 // One example is you can use it to disable security check (https):
 //
 // 			gohttp.New().TLSClientConfig(&tls.Config{ InsecureSkipVerify: true}).
@@ -315,6 +326,21 @@ func (s *HttpAgent) Proxy(proxyUrl string) *HttpAgent {
 
 func (s *HttpAgent) MaxRedirect(redirect int) *HttpAgent {
 	s.MaxRedirects = redirect
+	return s
+}
+
+func (s *HttpAgent) SetFormData(formData url.Values) *HttpAgent {
+	s.FormData = formData
+	return s
+}
+
+func (s *HttpAgent) SetQueryData(queryData url.Values) *HttpAgent {
+	s.QueryData = queryData
+	return s
+}
+
+func (s *HttpAgent) SetPostData(data map[string]interface{}) *HttpAgent {
+	s.Data = data
 	return s
 }
 
