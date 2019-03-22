@@ -369,9 +369,15 @@ func (s *HttpAgent) MaxRedirect(redirect int) *HttpAgent {
 func (s *HttpAgent) Send(content interface{}) *HttpAgent {
 	switch t := content.(type) {
 	case url.Values:
-		s.FormData = t
+		for k, values := range t {
+			for _, v := range values {
+				s.FormData.Add(k, v)
+			}
+		}
 	case map[string]interface{}:
-		s.Data = t
+		for k, v := range t {
+			s.Data[k] = v
+		}
 	default:
 		// TODO: add normal text mode or other mode to Send func
 		switch v := reflect.ValueOf(content); v.Kind() {
@@ -439,7 +445,7 @@ func (s *HttpAgent) SendString(content string) *HttpAgent {
 	} else if err := json.Unmarshal([]byte(content), &valslice); err == nil {
 		s.DataAll = valslice
 	} else if formVal, err := url.ParseQuery(content); err == nil {
-		for k, _ := range formVal {
+		for k := range formVal {
 			// make it array if already have key
 			if val, ok := s.Data[k]; ok {
 				var strArray []string
