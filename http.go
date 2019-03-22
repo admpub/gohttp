@@ -242,12 +242,7 @@ func (s *HttpAgent) queryStruct(content interface{}) *HttpAgent {
 		if err := json.Unmarshal(marshalContent, &val); err != nil {
 			s.Errors = append(s.Errors, err)
 		} else {
-			newdata := changeMapToURLValues(val)
-			for k, v := range newdata {
-				for _, v1 := range v {
-					s.QueryData.Add(k, v1)
-				}
-			}
+			s.QueryData = s.ChangeMapToURLValues(val, s.QueryData)
 		}
 	}
 	return s
@@ -261,7 +256,7 @@ func (s *HttpAgent) queryString(content string) *HttpAgent {
 		}
 	} else {
 		if queryVal, err := url.ParseQuery(content); err == nil {
-			for k, _ := range queryVal {
+			for k := range queryVal {
 				s.QueryData.Add(k, queryVal.Get(k))
 			}
 		} else {
@@ -372,16 +367,23 @@ func (s *HttpAgent) MaxRedirect(redirect int) *HttpAgent {
 //        End()
 //
 func (s *HttpAgent) Send(content interface{}) *HttpAgent {
-	// TODO: add normal text mode or other mode to Send func
-	switch v := reflect.ValueOf(content); v.Kind() {
-	case reflect.String:
-		s.SendString(v.String())
-	case reflect.Array, reflect.Slice:
-		s.sendArray(v.Interface())
-	case reflect.Struct, reflect.Map:
-		s.sendStruct(v.Interface())
+	switch t := content.(type) {
+	case url.Values:
+		s.FormData = t
+	case map[string]interface{}:
+		s.Data = t
 	default:
-		// TODO: leave default for handling other types in the future such as number, byte, etc...
+		// TODO: add normal text mode or other mode to Send func
+		switch v := reflect.ValueOf(content); v.Kind() {
+		case reflect.String:
+			s.SendString(v.String())
+		case reflect.Array, reflect.Slice:
+			s.sendArray(v.Interface())
+		case reflect.Struct, reflect.Map:
+			s.sendStruct(v.Interface())
+		default:
+			// TODO: leave default for handling other types in the future such as number, byte, etc...
+		}
 	}
 	return s
 }
@@ -462,39 +464,42 @@ func (s *HttpAgent) SendString(content string) *HttpAgent {
 	return s
 }
 
-func (s *HttpAgent) ChangeMapToURLValues(data map[string]interface{}) *HttpAgent {
+func (s *HttpAgent) ChangeMapToURLValues(data map[string]interface{}, toURLValues url.Values) url.Values {
+	if toURLValues == nil {
+		toURLValues = url.Values{}
+	}
 	for k, v := range data {
 		switch val := v.(type) {
 		case bool:
 			if val {
-				s.FromData.Add(k, "1")
+				toURLValues.Add(k, "1")
 			} else {
-				s.FromData.Add(k, "0")
+				toURLValues.Add(k, "0")
 			}
 		case json.Number:
-			s.FromData.Add(k, string(val))
+			toURLValues.Add(k, string(val))
 		case int, int8, int16, int32, int64, float64, float32:
-			s.FromData.Add(k, fmt.Sprintf("%v", val))
+			toURLValues.Add(k, fmt.Sprintf("%v", val))
 		case uint, uint8, uint16, uint32, uint64:
-			s.FromData.Add(k, fmt.Sprintf("%v", val))
+			toURLValues.Add(k, fmt.Sprintf("%v", val))
 		case string:
-			s.FromData.Add(k, val)
+			toURLValues.Add(k, val)
 		case []int, []int64, []float64, []interface{}:
 			v := reflect.ValueOf(val)
 			for i := 0; i < v.Len(); i++ {
-				s.FromData.Add(fmt.Sprintf("%s[]", k), fmt.Sprintf("%v", v.Index(i).Interface()))
+				toURLValues.Add(fmt.Sprintf("%s[]", k), fmt.Sprintf("%v", v.Index(i).Interface()))
 			}
 		case []string:
 			for _, element := range val {
-				s.FromData.Add(fmt.Sprintf("%s[]", k), element)
+				toURLValues.Add(fmt.Sprintf("%s[]", k), element)
 			}
 		default:
 			body, _ := json.Marshal(val)
-			s.FromData.Add(k, string(body))
+			toURLValues.Add(k, string(body))
 		}
 	}
 
-	return s
+	return toURLValues
 }
 
 func (s *HttpAgent) Jar(use bool) *HttpAgent {
@@ -564,17 +569,17 @@ func (s *HttpAgent) End(callback ...func(response *http.Response, errs []error))
 	switch s.Method {
 	case POST, PUT, PATCH:
 		if s.TargetType == "json" {
-			var contentJson []byte
+			var contentJSON []byte
 			if s.DataAll != nil {
-				contentJson, _ = json.Marshal(s.DataAll)
+				contentJSON, _ = json.Marshal(s.DataAll)
 			} else {
-				contentJson, _ = json.Marshal(s.Data)
+				contentJSON, _ = json.Marshal(s.Data)
 			}
-			contentReader := bytes.NewReader(contentJson)
+			contentReader := bytes.NewReader(contentJSON)
 			req, err = http.NewRequest(s.Method, s.Url, contentReader)
 			req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 		} else if s.TargetType == "form" {
-			formData := s.ChangeMapToURLValues(s.Data).FormData
+			formData := s.ChangeMapToURLValues(s.Data, s.FormData)
 			req, err = http.NewRequest(s.Method, s.Url, strings.NewReader(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		} else if s.TargetType == "text" {
@@ -590,7 +595,7 @@ func (s *HttpAgent) End(callback ...func(response *http.Response, errs []error))
 			mw := multipart.NewWriter(&buf)
 
 			if len(s.Data) != 0 {
-				formData := s.ChangeMapToURLValues(s.Data).FormData
+				formData := s.ChangeMapToURLValues(s.Data, s.FormData)
 				for key, values := range formData {
 					for _, value := range values {
 						fw, _ := mw.CreateFormField(key)
